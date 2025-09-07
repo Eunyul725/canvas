@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drawing Canvas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100..900&display=swap" rel="stylesheet">
+  <link rel="icon" href="./image/favicon.ico" />
+  <style>
+    :root {
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --line: #e6e8ee;
+      --text: #111827;
+      --muted: #6b7280;
+      --brand: #2563eb;
+      --accent: #f59e0b;
+      --radius: 14px;
+      --shadow: 0 6px 20px rgba(17,24,39,0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0;}
+    html, body { width:100%; height:100%; }
+    body { 
+      display:flex; 
+      justify-content:center; 
+      align-items:center;
+      flex-direction: column;
+      background: var(--bg);
+      font-family: "Noto Sans KR", sans-serif;
+    }
+    button, input { cursor: pointer;}
+    canvas { 
+      width:800px; 
+      height:600px;
+      border:1px solid var(--line); 
+      border-radius: var(--radius); 
+      box-shadow: var(--shadow); 
+    }
+    .inner {
+      display: flex;
+    }
+    /* 상단 툴 */
+    .tools_top {
+      width: 1040px;
+      margin-bottom: 8px;
+      padding: 10px 26px;
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      background: #fff;
+      border-radius: var(--radius);
+    }
+    .color_picker {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .color_picker input {
+      margin-right: 22px;
+    }
+    #erase {
+      border: 0 none;
+      background: inherit;
+      width: 60px;
+      padding: 0 16px 0 16px;
+      border-left: 1px solid var(--line);
+    }
+    #erase.active {
+      background: #efa93d;
+    }
+    .btns button {
+      border: 0 none;
+      padding: 8px 18px;
+      background: var(--muted);
+      color: #fff;
+      border-radius: var(--radius);
+    }
+    #save {
+      margin-left: 6px;
+      background: #0075ff;
+    }
+
+    /* 좌측 툴 */
+    .tools_left {
+      margin-right: 8px;
+      padding: 10px;
+      background: #fff;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .type {
+      width: max-content;
+      text-align: center;
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+      background: var(--line);
+      padding: 6px 12px;
+      border-radius: var(--radius);
+    }
+    .brush_tools, 
+    .shape_tools  {
+      display: flex; 
+      flex-direction: column; 
+      align-items: center;
+    }
+    .brush_tools button, 
+    .shape_tools button {
+      margin-bottom: 5px;
+      padding: 6px 10px;
+      cursor: pointer;
+      width: 50px;
+      height: max-content;
+      border: 0 ;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .brush_tools button:last-child, 
+    .shape_tools button:last-child { 
+      border-bottom: 0; 
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .shape_tools {
+      margin-top: 28px;
+    }
+    .brush_tools button img,
+    .shape_tools button img { 
+      pointer-events: none; 
+    }
+    .brush_tools button.active,
+    .shape_tools button.active { 
+      background: #efa93d; 
+    }
+    button:hover {
+      background: #efa93d !important;
+    }
+
+    /* 우측 툴 */
+    .tools_right {
+      width: 160px;
+      margin-left: 8px;
+      padding: 10px;
+      background: #fff;
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .colors {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .color_title {
+      width: max-content;
+    }
+    .ex { 
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .ex  span { display: block; width:40px; height:40px; cursor:pointer; }
+    .ex  span:nth-child(1) { background:#e74c3c; }
+    .ex  span:nth-child(2) { background:#f1c40f; }
+    .ex  span:nth-child(3) { background:#2ecc71; }
+    .ex  span:nth-child(4) { background:#3498db; }
+    .ex  span:nth-child(5) { background:#ededed; }
+    .ex  span:nth-child(6) { background:#2c3e50; }
+    #imgFile{ display:none; }
+    label{
+      display:block;
+      color: #fff;
+      font-size: 0.9rem;
+      text-align:center; 
+      line-height:30px;
+      margin-bottom: 20px; 
+      cursor:pointer;
+      
+      border: 0 none;
+      padding: 4px 18px;
+      background: var(--muted);
+      color: #fff;
+      border-radius: var(--radius);
+    }
+    label:hover {
+      background: #efa93d;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="tools_top">
+    <div class="color_picker">
+      선 색상 : <input type="color" id="strokeColor" value="#000000">
+      채우기 색상 : <input type="color" id="fillColor" value="#ffffff">
+      선 굵기 : <input type="range" id="strokeW" min="1" max="9" value="4">
+      <button id="erase">
+        <img src="image/erase.svg" alt="지우개">
+      </button>
+    </div>
+    <div class="btns">
+      <button id="reset">초기화</button>
+      <button id="save">저장</button>
+    </div>
+  </div>
+
+  <div class="inner">
+    <div class="tools_left">
+      <div class="brush_tools">
+        <p class="type">브러쉬</p>
+        <button data-brush="round">
+          <img src="image/round_brush.svg" alt="둥근형 브러쉬">
+        </button>
+        <button data-brush="square">
+          <img src="image/flat_brush.svg" alt="사각형 브러쉬">
+        </button>
+        <button data-brush="ellipse">
+          <img src="image/ellipse_brush.svg" alt="타원형 브러쉬">
+        </button>
+      </div>
+      <div class="shape_tools">
+        <p class="type">도형</p>
+        <button data-shape="free">
+          <img src="image/free.svg" alt="자유곡선">
+        </button>
+        <button data-shape="rect">
+          <img src="image/rect.svg" alt="사각형">
+        </button>
+        <button data-shape="circle">
+          <img src="image/circle.svg" alt="원">
+        </button>
+        <button data-shape="roundRect">
+          <img src="image/roundrect.svg" alt="둥근 사각형">
+        </button>
+        <button data-shape="triangle">
+          <img src="image/triangle.svg" alt="삼각형">
+        </button>
+        <button data-shape="ellipse">
+          <img src="image/ellipse.svg" alt="타원">
+        </button>
+      </div>
+    </div>
+
+    <canvas></canvas>
+
+    <div class="tools_right">
+      <div class="colors">
+        <p class="type color_title">색상 팔레트</p>
+        <div class="ex">
+          <span data-color="#e74c3c"></span>
+          <span data-color="#f1c40f"></span>
+          <span data-color="#2ecc71"></span>
+          <span data-color="#3498db"></span>
+          <span data-color="#ededed"></span>
+          <span data-color="#2c3e50"></span>
+        </div>
+      </div>
+      <div class="imgFilt_wrap">
+        <input type="file" id="imgFile" accept="image/*">
+        <label for="imgFile">이미지 찾기</label>
+      </div>
+    </div>
+
+
+  <script>
+    const canvas = document.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
+    const strW = document.querySelector('#strokeW');
+    const colorBtn = document.querySelectorAll('.colors span');
+    const resetBtn = document.querySelector('#reset');
+    const eraseBtn = document.querySelector('#erase');
+    const saveBtn = document.querySelector('#save');
+    const strokeColorPicker = document.querySelector('#strokeColor');
+    const fillColorPicker = document.querySelector('#fillColor');
+    const shapeButtons = document.querySelectorAll('.shape_tools button');
+    const brushButtons = document.querySelectorAll('.brush_tools button');
+
+    canvas.width = 800;
+    canvas.height = 600;
+    ctx.lineCap = "round";
+    ctx.lineWidth = strW.value;
+
+    let isDrawing = false;
+    let startX, startY;
+    let shapes = [];
+    let selectedShape = null;
+    let isDragging = false;
+    let lastX, lastY;
+    let lastDrawn = null;
+    let isErasing = false;
+    let currentTool = { shape: 'free', brush: 'round' };
+
+    function pathRoundRect(x, y, w, h, r = 10){
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    class Shape {
+      constructor(type, x, y, width, height, strokeColor, fillColor, lineWidth) {
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.strokeColor = strokeColor;
+        this.fillColor = fillColor;
+        this.lineWidth = lineWidth;
+        this.zIndex = shapes.length;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.strokeStyle = this.strokeColor;
+        ctx.fillStyle = this.fillColor;
+        ctx.lineWidth = this.lineWidth;
+
+        switch(this.type) {
+          case 'rect':
+            ctx.rect(this.x, this.y, this.width, this.height);
+            break;
+          case 'circle':
+            const radius = Math.sqrt(this.width * this.width + this.height * this.height) / 2;
+            ctx.arc(this.x + this.width/2, this.y + this.height/2, radius, 0, Math.PI * 2);
+            break;
+          case 'roundRect':
+            pathRoundRect(this.x, this.y, this.width, this.height, 10);
+            break;
+          case 'triangle':
+            ctx.moveTo(this.x, this.y + this.height);
+            ctx.lineTo(this.x + this.width/2, this.y);
+            ctx.lineTo(this.x + this.width, this.y + this.height);
+            ctx.closePath();
+            break;
+          case 'ellipse':
+            ctx.ellipse(
+              this.x + this.width/2,
+              this.y + this.height/2,
+              Math.abs(this.width/2),
+              Math.abs(this.height/2),
+              0, 0, Math.PI * 2
+            );
+            break;
+        }
+        
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    let canvasStates = [];
+    let currentCanvasState = null;
+
+    function redrawShapes() {
+      if (currentCanvasState) {
+        ctx.putImageData(currentCanvasState, 0, 0);
+      } else {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      shapes.forEach(shape => { shape.draw(); });
+    }
+
+    const downEvent = (event) => {
+      isDrawing = true;
+      startX = event.offsetX;
+      startY = event.offsetY;
+      lastX = startX;
+      lastY = startY;
+
+      if (currentTool.shape === 'free') {
+        currentCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+      } else {
+        lastDrawn = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      }
+    };
+
+    const moveEvent = (event) => {
+      if (!isDrawing) return;
+      const currentX = event.offsetX;
+      const currentY = event.offsetY;
+
+      if (currentTool.shape === 'free') {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = isErasing ? '#ffffff' : strokeColorPicker.value;
+
+        if (currentTool.brush === 'ellipse') {
+          ctx.lineTo(currentX, currentY);
+          ctx.stroke();
+        } else {
+          ctx.lineTo(currentX, currentY);
+          ctx.stroke();
+        }
+      } else {
+        if (lastDrawn) ctx.putImageData(lastDrawn, 0, 0);
+
+        ctx.beginPath();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = strokeColorPicker.value;
+        ctx.fillStyle = fillColorPicker.value;
+        
+        const width = currentX - startX;
+        const height = currentY - startY;
+        
+        switch(currentTool.shape) {
+          case 'rect':
+            ctx.rect(startX, startY, width, height);
+            break;
+          case 'circle':
+            const radius = Math.sqrt(width * width + height * height) / 2;
+            ctx.arc(startX + width/2, startY + height/2, radius, 0, Math.PI * 2);
+            break;
+          case 'roundRect':
+            pathRoundRect(startX, startY, width, height, 10);
+            break;
+          case 'triangle':
+            ctx.moveTo(startX, startY + height);
+            ctx.lineTo(startX + width/2, startY);
+            ctx.lineTo(startX + width, startY + height);
+            ctx.closePath();
+            break;
+          case 'ellipse':
+            ctx.ellipse(
+              startX + width/2,
+              startY + height/2,
+              Math.abs(width/2),
+              Math.abs(height/2),
+              0, 0, Math.PI * 2
+            );
+            break;
+        }
+        
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      lastX = currentX;
+      lastY = currentY;
+    };
+
+    const upEvent = (event) => {
+      if (!isDrawing) return;
+
+      ctx.globalCompositeOperation = 'source-over';
+      
+      if (currentTool.shape === 'free') {
+        currentCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      } else if (currentTool.shape !== 'select') {
+        const width = event.offsetX - startX;
+        const height = event.offsetY - startY;
+        
+        const newShape = new Shape(
+          currentTool.shape,
+          startX,
+          startY,
+          width,
+          height,
+          strokeColorPicker.value,
+          fillColorPicker.value,
+          ctx.lineWidth
+        );
+        
+        shapes.push(newShape);
+        currentCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      }
+
+      isDrawing = false;
+      isDragging = false;
+      lastDrawn = null;
+    };
+
+    canvas.addEventListener('mousedown', downEvent);
+    canvas.addEventListener('mousemove', moveEvent);
+    canvas.addEventListener('mouseup', upEvent);
+    canvas.addEventListener('mouseleave', upEvent);
+
+    shapeButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        currentTool.shape = e.currentTarget.dataset.shape;
+        isErasing = false;
+        shapeButtons.forEach(btn => btn.classList.remove('active'));
+        eraseBtn.classList.remove('active');
+        e.currentTarget.classList.add('active');
+        canvas.style.cursor = currentTool.shape === 'select' ? 'pointer' : 'crosshair';
+      });
+    });
+
+    brushButtons.forEach(button => {
+      button.addEventListener('click', (e) => {
+        currentTool.brush = e.currentTarget.dataset.brush;
+        ctx.lineCap = currentTool.brush === 'square' ? 'butt' : 'round';
+        brushButtons.forEach(btn => btn.classList.remove('active'));
+        eraseBtn.classList.remove('active');
+        e.currentTarget.classList.add('active');
+      });
+    });
+
+    strokeColorPicker.addEventListener('change', (e) => {
+      ctx.strokeStyle = e.target.value;
+    });
+
+    fillColorPicker.addEventListener('change', (e) => {
+      ctx.fillStyle = e.target.value;
+    });
+
+    const lineW = (event) => {
+      ctx.lineWidth = event.target.value;
+    };
+
+    const colorChange = (event) => {
+      const color = event.currentTarget.dataset.color;
+      ctx.strokeStyle = color;
+      strokeColorPicker.value = color;
+    };
+
+    const deleteAll = () => {
+      shapes = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = strokeColorPicker.value;
+      ctx.fillStyle = fillColorPicker.value;
+      ctx.lineWidth = strW.value;
+      currentCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      canvasStates = [];
+    };
+
+    const eraser = () => {
+      isErasing = true;
+      currentTool.shape = 'free';
+      shapeButtons.forEach(btn => btn.classList.remove('active'));
+      brushButtons.forEach(btn => btn.classList.remove('active'));
+      eraseBtn.classList.add('active');
+    };
+
+    const saveImage = () => {
+      const a = document.createElement('a');
+      a.download = 'drawing.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    };
+
+    resetBtn.addEventListener('click', deleteAll);
+    eraseBtn.addEventListener('click', eraser);
+    saveBtn.addEventListener('click', saveImage);
+    strW.addEventListener('change', lineW);
+    colorBtn.forEach((span) => span.addEventListener('click', colorChange) );
+
+    deleteAll();
+    shapeButtons[0].classList.add('active');
+    brushButtons[0].classList.add('active');
+
+    const imgFileInput = document.querySelector('#imgFile');
+
+    imgFileInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const iw = img.width;
+        const ih = img.height;
+
+        const scale = Math.min(cw / iw, ch / ih);
+        const drawW = iw * scale;
+        const drawH = ih * scale;
+        const dx = (cw - drawW) / 2;
+        const dy = (ch - drawH) / 2;
+
+        ctx.drawImage(img, dx, dy, drawW, drawH);
+        currentCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        isErasing = false;
+        ctx.globalCompositeOperation = 'source-over';
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  </script>
+</body>
+</html>
